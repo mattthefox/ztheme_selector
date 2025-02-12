@@ -1,0 +1,12 @@
+{
+	"path": "/home/mantra/.local/share/rofi/themes/catppuccin-mocha.rasi",
+	"updaters": [
+		{"line": "\tbg-col: <x>;", "line_number": 1, "replaceWith": "base"},
+		{"line": "\tbg-col-light: <x>;", "line_number": 3, "replaceWith": "subtle"},
+		{"line": "\tborder-col: <x>;", "line_number": 4, "replaceWith": "surface"},
+		{"line": "\tselected-col: <x>;", "line_number": 5, "replaceWith": "accent"},
+		{"line": "\tblue: <x>;", "line_number": 6, "replaceWith": "accent"},
+		{"line": "\tfg-col: <x>;", "line_number": 7, "replaceWith": "muted"},
+		{"line": "\tfg-col2: <x>;", "line_number": 8, "replaceWith": "text"}
+	]
+}
