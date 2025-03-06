@@ -148,28 +148,31 @@ theme_data = {section: dict(config[section]) for section in config.sections()}
 
 print(f"You selected: {selected_theme}")
 
+# A basic mapping scheme based on Catpuccin Mocha
+CATPUCCIN_MOCHA_MAPPING = { 
+    "crust": "#11111b",
+    "base": "#1e1e2e",
+    "surface": "#313244",
+    "overlay": "#6c7086",
+    "subtle": "#9399b2",
+    "muted": "#bac2de",
+    "text": "#cdd6f4",
+    "purple": "#cba6f7",
+    "blue": "#89b4fa",
+    "green": "#a6e3a1",
+    "yellow": "#f9e2af",
+    "orange": "#fab387",
+    "accent": "#ff0000",
+    "red": "#f38ba8"
+}
+
 # Update configs
 injectors = [
     ReplaceLineInjector("./config.ini", "include-file=<x>", 1, selected_theme),
     ReplaceLineInjector("./modules/polywins.sh", "ini_file=<x>", 4, selected_theme),
     ReplaceLineInjector("./modules/polybar-now-playing", "theme = \"<x>\"", 14, selected_theme),
     RofiInjector("/home/mantra/.local/share/rofi/themes/catppuccin-mocha.rasi", theme_data["colors"]),
-    ColorDictInjector("/home/mantra/.vscode/extensions/catppuccin.catppuccin-vsc-3.16.1/themes/mocha.json", theme_data["colors"],
-                      {
-                        "crust": "#11111b",
-                        "base": "#1e1e2e",
-                        "surface": "#313244",
-                        "overlay": "#6c7086",
-                        "subtle": "#9399b2",
-                        "muted": "#bac2de",
-                        "text": "#cdd6f4",
-                        "purple": "#cba6f7",
-                        "blue": "#89b4fa",
-                        "green": "#a6e3a1",
-                        "yellow": "#f9e2af",
-                        "orange": "#fab387",
-                        "red": "#f38ba8"
-                      }) # VSCode Catpuccin Mocha Injector
+    ColorDictInjector("/home/mantra/.vscode/extensions/catppuccin.catppuccin-vsc-3.16.1/themes/mocha.json", theme_data["colors"], CATPUCCIN_MOCHA_MAPPING) # VSCode Catpuccin Mocha Injector
 ]
 
 
