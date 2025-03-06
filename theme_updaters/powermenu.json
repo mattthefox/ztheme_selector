@@ -1,0 +1,8 @@
+{
+	"path": "/home/mantra/.config/rofi/themes/powermenu.rasi",
+	"updaters": [
+		{"line": "  background: <x>;", "line_number": 11, "replaceWith": "base"},
+		{"line": "  foreground: <x>;", "line_number": 12, "replaceWith": "muted"},
+		{"line": "  selected: <x>;", "line_number": 14, "replaceWith": "accent"}
+	]
+}

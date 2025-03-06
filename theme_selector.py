@@ -1,56 +1,93 @@
 import os
 import subprocess
-import json
 import configparser
-import pprint
 import curses
+import shutil
 
 DIR = "/home/mantra/Config/polybar"
 UPDATERS_DIR = "/home/mantra/.local/share/applications/theme_updaters"
 CONFIG = os.path.join(DIR, "config.ini")
 THEME_DIR = os.path.join(DIR, "themes")
 
-includeFileUpdaters = [
-    {
-        "path": "./config.ini",
-        "updaters": [
-            {"line": "include-file=<x>", "line_number": 0, "replaceWith": "themeFile"}
-        ]
-    },
-    {
-        "path": "./modules/polywins.sh",
-        "updaters": [
-            {"line": "ini_file=<x>", "line_number": 3, "replaceWith": "themeFile"}
-        ]
-    },
-    {
-        "path": "./modules/polybar-now-playing",
-        "updaters": [
-            {"line": 'theme = "<x>"', "line_number": 13, "replaceWith": "themeFile"}
-        ]
-    },
-    {
-        "refer": "rofi.json"
-    }
-]
+# Basic injector types.
 
-new_updaters = []
-for updater in includeFileUpdaters:
-    if isinstance(updater, dict) and "refer" in updater:
-        json_path = os.path.join(UPDATERS_DIR, updater["refer"])
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                new_updaters.extend(data)
-            elif isinstance(data, dict):
-                new_updaters.append(data)
+
+class Injector:
+    def __init__(self, file_path, theme_colors):
+        if file_path[0] == ".":
+            self.file_path = file_path.replace(".", DIR, 1)
         else:
-            print(f"Referred '{json_path}' not found!")
-    else:
-        new_updaters.append(updater)
+            self.file_path = file_path
+        self.theme_colors = theme_colors
+        self.load()
 
-includeFileUpdaters = new_updaters
+    # Basic methods
+    def load(self):
+        with open(self.file_path, 'r', encoding='utf-8') as f:
+            self.lines = f.readlines()
+
+    def inject(self):
+        return self.lines
+
+    def save(self):
+        with open(self.file_path, 'w', encoding='utf-8') as f:
+            f.writelines(self.lines)
+
+    # Shared methods
+    def replaceLine(self, pattern, line, replacement):
+        if 0 <= (line - 1) < len(self.lines):
+            self.lines[line - 1] = pattern.replace("<x>", replacement) + "\n"
+        return self.lines
+
+class ReplaceLineInjector(Injector):
+    def __init__(self, file_path, search_pattern, line_number, replacement):
+        super().__init__(file_path, {})
+        self.search_pattern = search_pattern
+        self.line_number = line_number 
+        self.replacement = replacement
+
+    def inject(self):
+        super().replaceLine(self.search_pattern, self.line_number, self.replacement)
+        return self.lines
+
+class RofiInjector(Injector):
+    def __init__(self, file_path, theme_colors):
+        super().__init__(file_path, theme_colors)
+
+    def inject(self):
+        print(self.theme_colors)
+        super().replaceLine("\tbg-col: <x>;", 2, self.theme_colors["base"])        # Replaces the background color with base
+        super().replaceLine("\tbg-col-light: <x>;", 4, self.theme_colors["subtle"]) # Replaces the light background color
+        super().replaceLine("\tborder-col: <x>;", 5, self.theme_colors["surface"])  # Replaces the border color
+        super().replaceLine("\tselected-col: <x>;", 6, self.theme_colors["accent"]) # Replaces the selected color
+        super().replaceLine("\tblue: <x>;", 7, self.theme_colors["accent"])         # Replaces the blue color
+        super().replaceLine("\tfg-col: <x>;", 8, self.theme_colors["muted"])         # Replaces the foreground color 1
+        super().replaceLine("\tfg-col2: <x>;", 9, self.theme_colors["text"])         # Replaces the foreground color 2
+        return self.lines
+
+class ColorDictInjector(Injector):
+    def __init__(self, file_path, theme_colors, mapping):
+        super().__init__(file_path, theme_colors)
+        self.mapping = mapping
+
+    def inject(self):
+        # Check if the backup already exists
+        self.backup_file_path = self.file_path + ".themebak"
+        if not os.path.exists(self.backup_file_path):
+            # If not, create the backup file
+            shutil.copy(self.file_path, self.backup_file_path)
+        
+        # Open the backup file and apply replacements
+        with open(self.backup_file_path, 'r', encoding='utf-8') as f:
+            self.lines = f.readlines()
+
+        # Perform replacements based on the mapping
+        for color_name, color_value in self.mapping.items():
+            # Iterate over each line and replace the color name with the corresponding hex value
+            self.lines = [line.replace(color_value.upper(), self.theme_colors[color_name].upper()) for line in self.lines]
+
+        return self.lines
+
 
 # Check if the directory exists
 if not os.path.isdir(THEME_DIR):
@@ -108,33 +145,37 @@ selected_theme = curses.wrapper(select_theme)
 config = configparser.ConfigParser()
 config.read(selected_theme)
 theme_data = {section: dict(config[section]) for section in config.sections()}
-print(theme_data)
 
 print(f"You selected: {selected_theme}")
 
 # Update configs
-for updater in includeFileUpdaters:
-    if "path" not in updater:
-        continue
-    if updater["path"].startswith("./"):  # If we are using a relative path
-        config_path = os.path.join(DIR, updater["path"][2:])
-    else:
-        config_path = updater["path"]
-    if not os.path.exists(config_path):
-        print(f"Warning: {config_path} not found!")
-        continue
+injectors = [
+    ReplaceLineInjector("./config.ini", "include-file=<x>", 1, selected_theme),
+    ReplaceLineInjector("./modules/polywins.sh", "ini_file=<x>", 4, selected_theme),
+    ReplaceLineInjector("./modules/polybar-now-playing", "theme = \"<x>\"", 14, selected_theme),
+    RofiInjector("/home/mantra/.local/share/rofi/themes/catppuccin-mocha.rasi", theme_data["colors"]),
+    ColorDictInjector("/home/mantra/.vscode/extensions/catppuccin.catppuccin-vsc-3.16.1/themes/mocha.json", theme_data["colors"],
+                      {
+                        "crust": "#11111b",
+                        "base": "#1e1e2e",
+                        "surface": "#313244",
+                        "overlay": "#6c7086",
+                        "subtle": "#9399b2",
+                        "muted": "#bac2de",
+                        "text": "#cdd6f4",
+                        "purple": "#cba6f7",
+                        "blue": "#89b4fa",
+                        "green": "#a6e3a1",
+                        "yellow": "#f9e2af",
+                        "orange": "#fab387",
+                        "red": "#f38ba8"
+                      }) # VSCode Catpuccin Mocha Injector
+]
 
-    with open(config_path, 'r') as f:
-        config_lines = f.readlines()
 
-    for update in updater.get("updaters", []):
-        if update["replaceWith"] == "themeFile":
-            config_lines[update["line_number"]] = update["line"].replace("<x>", selected_theme) + "\n"
-        else:
-            config_lines[update["line_number"]] = update["line"].replace("<x>", theme_data["colors"][update["replaceWith"]]) + "\n"
-
-    with open(config_path, 'w') as f:
-        f.writelines(config_lines)
+for injector in injectors:
+    injector.lines = injector.inject()
+    injector.save()
 
 # Reboot polybar
 subprocess.run(["killall", "polybar"])
