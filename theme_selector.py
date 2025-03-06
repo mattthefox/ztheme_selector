@@ -55,7 +55,6 @@ class RofiInjector(Injector):
         super().__init__(file_path, theme_colors)
 
     def inject(self):
-        print(self.theme_colors)
         super().replaceLine("\tbg-col: <x>;", 2, self.theme_colors["base"])        # Replaces the background color with base
         super().replaceLine("\tbg-col-light: <x>;", 4, self.theme_colors["subtle"]) # Replaces the light background color
         super().replaceLine("\tborder-col: <x>;", 5, self.theme_colors["surface"])  # Replaces the border color
@@ -63,6 +62,41 @@ class RofiInjector(Injector):
         super().replaceLine("\tblue: <x>;", 7, self.theme_colors["accent"])         # Replaces the blue color
         super().replaceLine("\tfg-col: <x>;", 8, self.theme_colors["muted"])         # Replaces the foreground color 1
         super().replaceLine("\tfg-col2: <x>;", 9, self.theme_colors["text"])         # Replaces the foreground color 2
+        return self.lines
+    
+class KittyInjector(Injector):
+    def __init__(self, file_path, theme_colors):
+        super().__init__(file_path, theme_colors)
+        self.theme_colors = {key: value.upper() for key, value in self.theme_colors.items()}  # Make all colors uppercase
+
+    def inject(self):
+        # Primary UI
+        super().replaceLine("foreground <x>", 12, self.theme_colors["text"])
+        super().replaceLine("background <x>", 13, self.theme_colors["base"])
+        super().replaceLine("selection_foreground <x>", 14, self.theme_colors["accent"])
+        super().replaceLine("selection_background <x>", 15, self.theme_colors["base"])
+        super().replaceLine("cursor <x>", 18, self.theme_colors["accent"])
+        super().replaceLine("cursor_text_color <x>", 19, self.theme_colors["base"])
+        super().replaceLine("url_color <x>", 22, self.theme_colors["accent"])
+
+        # Colors
+        super().replaceLine("color0  <x>", 51, self.theme_colors["red"])
+        super().replaceLine("color8  <x>", 52, self.theme_colors["red"])
+        super().replaceLine("color1  <x>", 55, self.theme_colors["orange"])
+        super().replaceLine("color9  <x>", 56, self.theme_colors["orange"])
+        super().replaceLine("color2  <x>", 63, self.theme_colors["yellow"])
+        super().replaceLine("color10  <x>", 64, self.theme_colors["yellow"])
+        super().replaceLine("color3  <x>", 59, self.theme_colors["green"])
+        super().replaceLine("color11  <x>", 60, self.theme_colors["green"])
+        super().replaceLine("color4  <x>", 67, self.theme_colors["blue"])
+        super().replaceLine("color12  <x>", 68, self.theme_colors["blue"])
+        super().replaceLine("color5  <x>", 71, self.theme_colors["purple"])
+        super().replaceLine("color13  <x>", 72, self.theme_colors["purple"])
+        super().replaceLine("color6  <x>", 75, self.theme_colors["accent"])
+        super().replaceLine("color14  <x>", 76, self.theme_colors["accent"])
+        super().replaceLine("color7  <x>", 79, self.theme_colors["text"])
+        super().replaceLine("color15  <x>", 80, self.theme_colors["text"])
+        
         return self.lines
 
 class ColorDictInjector(Injector):
@@ -145,6 +179,7 @@ selected_theme = curses.wrapper(select_theme)
 config = configparser.ConfigParser()
 config.read(selected_theme)
 theme_data = {section: dict(config[section]) for section in config.sections()}
+theme_colors = theme_data["colors"]
 
 print(f"You selected: {selected_theme}")
 
@@ -171,8 +206,9 @@ injectors = [
     ReplaceLineInjector("./config.ini", "include-file=<x>", 1, selected_theme),
     ReplaceLineInjector("./modules/polywins.sh", "ini_file=<x>", 4, selected_theme),
     ReplaceLineInjector("./modules/polybar-now-playing", "theme = \"<x>\"", 14, selected_theme),
-    RofiInjector("/home/mantra/.local/share/rofi/themes/catppuccin-mocha.rasi", theme_data["colors"]),
-    ColorDictInjector("/home/mantra/.vscode/extensions/catppuccin.catppuccin-vsc-3.16.1/themes/mocha.json", theme_data["colors"], CATPUCCIN_MOCHA_MAPPING) # VSCode Catpuccin Mocha Injector
+    RofiInjector("/home/mantra/.local/share/rofi/themes/catppuccin-mocha.rasi", theme_colors),
+    KittyInjector("/home/mantra/.config/kitty/current-theme.conf", theme_colors),
+    ColorDictInjector("/home/mantra/.vscode/extensions/catppuccin.catppuccin-vsc-3.16.1/themes/mocha.json", theme_colors, CATPUCCIN_MOCHA_MAPPING) # VSCode Catpuccin Mocha Injector
 ]
 
 
